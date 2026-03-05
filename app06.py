@@ -87,6 +87,7 @@ for k, v in {
     "total_prompt_tokens": 0,
     "total_output_tokens": 0,
     "total_turns": 0,
+    "analytics_logged": False,
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -166,6 +167,52 @@ def build_messages(api_history, taslak_raw):
         ]
         return memo + recent
     return recent
+
+# ── GOOGLE SHEETS ANALİTİK ────────────────────────────────────────
+@st.cache_resource
+def get_sheet():
+    """Streamlit secrets'tan credentials alır, sheet döner. Yoksa None."""
+    try:
+        import gspread
+        from google.oauth2.service_account import Credentials
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"],
+            scopes=[
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive",
+            ],
+        )
+        gc = gspread.authorize(creds)
+        sheet_name = st.secrets.get("ANALYTICS_SHEET", "Research Architect Analytics")
+        return gc.open(sheet_name).sheet1
+    except Exception:
+        return None
+
+def log_session(taslak_dict, selected, turns, pt, ot):
+    """Tamamlanan oturumu Google Sheets'e yazar. Hata olursa sessizce geçer."""
+    sheet = get_sheet()
+    if sheet is None:
+        return
+    try:
+        maliyet = round((pt * 0.075 + ot * 0.30) / 1_000_000, 6)
+        row = [
+            datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            selected,
+            turns,
+            pt,
+            ot,
+            pt + ot,
+            maliyet,
+            taslak_dict.get("Konsept",   "—"),
+            taslak_dict.get("Önem",      "—")[:100],
+            taslak_dict.get("Literatür", "—")[:100],
+            taslak_dict.get("Soru",      "—")[:150],
+            taslak_dict.get("Gösterge",  "—")[:100],
+        ]
+        sheet.append_row(row, value_input_option="USER_ENTERED")
+    except Exception:
+        pass
+
 
 # ── PDF OLUŞTURUCU ────────────────────────────────────────────────
 def build_pdf(selected, taslak_dict, display_history, r1, r2, r3, r4):
@@ -390,6 +437,17 @@ elif st.session_state.stage == 1:
 
 # ── STAGE 2: Tamamlandı ───────────────────────────────────────────
 elif st.session_state.stage == 2:
+    # Oturumu bir kez logla (sayfa her render'da tekrar çalışır, flag bunu önler)
+    if not st.session_state.analytics_logged:
+        log_session(
+            st.session_state.taslak_dict,
+            st.session_state.selected,
+            st.session_state.total_turns,
+            st.session_state.total_prompt_tokens,
+            st.session_state.total_output_tokens,
+        )
+        st.session_state.analytics_logged = True
+
     st.balloons()
     st.success("🎉 Modül 1 tamamlandı! KKV & Babbie standartlarında araştırma sorun hazır.")
     st.markdown("<br>", unsafe_allow_html=True)
