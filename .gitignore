@@ -1,0 +1,19 @@
+# Gizli
+.env
+.claude/
+
+# Gereksiz dosyalar
+app.py
+app02.py
+app03.py
+app04.py
+app05.py
+files.zip
+nul
+*.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
