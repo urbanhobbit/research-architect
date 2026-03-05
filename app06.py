@@ -84,6 +84,9 @@ for k, v in {
     "taslak_raw": "",
     "taslak_dict": {a: "" for a in DURUM_ALANLARI},
     "selected": None,
+    "total_prompt_tokens": 0,
+    "total_output_tokens": 0,
+    "total_turns": 0,
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -127,6 +130,25 @@ with st.sidebar:
     st.divider()
     if st.session_state.selected:
         st.caption(f"Danışman: **{st.session_state.selected}**")
+
+    # Token istatistikleri
+    pt = st.session_state.total_prompt_tokens
+    ot = st.session_state.total_output_tokens
+    if pt or ot:
+        toplam = pt + ot
+        maliyet = (pt * 0.075 + ot * 0.30) / 1_000_000
+        st.markdown(
+            f"<div style='font-size:.75em;color:#666;margin-top:4px;'>"
+            f"<b>📊 Oturum</b><br>"
+            f"Tur: {st.session_state.total_turns} &nbsp;·&nbsp; "
+            f"Toplam: {toplam:,} token<br>"
+            f"Gönderilen: {pt:,} &nbsp;·&nbsp; Alınan: {ot:,}<br>"
+            f"<span style='color:#2e7d32;'>~${maliyet:.5f}</span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+    st.divider()
     if st.button("↺ Sıfırla"):
         st.session_state.clear()
         st.rerun()
@@ -316,13 +338,23 @@ elif st.session_state.stage == 1:
             try:
                 model = get_model(PERSONAS[st.session_state.selected]["prompt"])
                 messages = build_messages(st.session_state.api_history, st.session_state.taslak_raw)
-                for chunk in stream(model, messages):
+                response = stream(model, messages)
+                for chunk in response:
                     if chunk.text:
                         thinking.empty()
                         full_text += chunk.text
                         visible = re.sub(r'<DURUM>.*', '', full_text, flags=re.DOTALL).strip()
                         visible = visible.replace('<TAMAMLANDI>', '').strip()
                         placeholder.markdown(visible + "▌")
+
+                # Token kullanımını kaydet
+                try:
+                    u = response.usage_metadata
+                    st.session_state.total_prompt_tokens  += u.prompt_token_count or 0
+                    st.session_state.total_output_tokens  += u.candidates_token_count or 0
+                    st.session_state.total_turns          += 1
+                except Exception:
+                    pass
 
                 # DURUM'u sidebar'a aktar
                 m = re.search(r'<DURUM>(.*?)</DURUM>', full_text, re.DOTALL)
