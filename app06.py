@@ -88,6 +88,7 @@ for k, v in {
     "total_output_tokens": 0,
     "total_turns": 0,
     "analytics_logged": False,
+    "sheets_error": "",
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -171,7 +172,7 @@ def build_messages(api_history, taslak_raw):
 # ── GOOGLE SHEETS ANALİTİK ────────────────────────────────────────
 @st.cache_resource
 def get_sheet():
-    """Streamlit secrets'tan credentials alır, sheet döner. Yoksa None."""
+    """Streamlit secrets'tan credentials alır, (sheet, hata) tuple'ı döner."""
     try:
         import gspread
         from google.oauth2.service_account import Credentials
@@ -184,14 +185,15 @@ def get_sheet():
         )
         gc = gspread.authorize(creds)
         sheet_name = st.secrets.get("ANALYTICS_SHEET", "Research Architect Analytics")
-        return gc.open(sheet_name).sheet1
-    except Exception:
-        return None
+        return gc.open(sheet_name).sheet1, None
+    except Exception as e:
+        return None, str(e)[:300]
 
 def log_session(taslak_dict, selected, turns, pt, ot):
-    """Tamamlanan oturumu Google Sheets'e yazar. Hata olursa sessizce geçer."""
-    sheet = get_sheet()
+    """Tamamlanan oturumu Google Sheets'e yazar. Hata session_state'e kaydedilir."""
+    sheet, conn_err = get_sheet()
     if sheet is None:
+        st.session_state.sheets_error = f"Bağlantı hatası: {conn_err}"
         return
     try:
         maliyet = round((pt * 0.075 + ot * 0.30) / 1_000_000, 6)
@@ -210,8 +212,9 @@ def log_session(taslak_dict, selected, turns, pt, ot):
             taslak_dict.get("Gösterge",  "—")[:100],
         ]
         sheet.append_row(row, value_input_option="USER_ENTERED")
-    except Exception:
-        pass
+        st.session_state.sheets_error = ""   # başarılı
+    except Exception as e:
+        st.session_state.sheets_error = str(e)[:300]
 
 
 # ── PDF OLUŞTURUCU ────────────────────────────────────────────────
@@ -220,12 +223,16 @@ def build_pdf(selected, taslak_dict, display_history, r1, r2, r3, r4):
     pdf.set_margins(20, 20, 20)
     pdf.set_auto_page_break(auto=True, margin=22)
 
-    # Türkçe karakter desteği — Windows + Linux (Streamlit Cloud)
+    # Türkçe karakter desteği — önce repo içi bundled font, sonra sistem fontları
+    _dir = os.path.dirname(os.path.abspath(__file__))
     font_paths = [
-        # Windows
+        # 1. Repo içi bundled — her platformda çalışır (Windows + Streamlit Cloud)
+        (os.path.join(_dir, "fonts", "DejaVuSans.ttf"),
+         os.path.join(_dir, "fonts", "DejaVuSans-Bold.ttf")),
+        # 2. Windows sistem fontları (fallback)
         (r"C:\Windows\Fonts\arial.ttf",   r"C:\Windows\Fonts\arialbd.ttf"),
         (r"C:\Windows\Fonts\calibri.ttf", r"C:\Windows\Fonts\calibrib.ttf"),
-        # Linux / Streamlit Cloud (Ubuntu)
+        # 3. Linux / Streamlit Cloud Ubuntu sistem fontları (fallback)
         ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
          "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
         ("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
@@ -456,6 +463,8 @@ elif st.session_state.stage == 2:
 
     st.balloons()
     st.success("🎉 Modül 1 tamamlandı! KKV & Babbie standartlarında araştırma sorun hazır.")
+    if st.session_state.get("sheets_error"):
+        st.warning(f"📊 Sheets log hatası — {st.session_state.sheets_error}")
     st.markdown("<br>", unsafe_allow_html=True)
 
     col_taslak, col_refleks = st.columns([1, 1], gap="large")
