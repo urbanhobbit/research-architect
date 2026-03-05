@@ -71,7 +71,7 @@ def get_model(persona_prompt):
     return genai.GenerativeModel(
         model_name=MODEL_NAME,
         system_instruction=persona_prompt,
-        generation_config={"max_output_tokens": 120, "temperature": 0.6},
+        generation_config={"max_output_tokens": 200, "temperature": 0.6},
     )
 
 # ── SESSION STATE ─────────────────────────────────────────────────
@@ -390,6 +390,12 @@ elif st.session_state.stage == 1:
                     if chunk.text:
                         thinking.empty()
                         full_text += chunk.text
+                        # Tekrar döngüsü algılama: aynı kelime 6+ kez geçiyorsa dur
+                        words = full_text.split()
+                        if len(words) > 12:
+                            last_word = words[-1]
+                            if words[-6:].count(last_word) >= 5:
+                                break
                         visible = re.sub(r'<DURUM>.*', '', full_text, flags=re.DOTALL).strip()
                         visible = visible.replace('<TAMAMLANDI>', '').strip()
                         placeholder.markdown(visible + "▌")
