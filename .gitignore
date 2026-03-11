@@ -1,6 +1,10 @@
 # Gizli
 .env
 .claude/
+.streamlit/secrets.toml
+
+# Öğrenci oturum logları — sunucuda kalır, commit etme
+logs/
 
 # Gereksiz dosyalar
 app.py
