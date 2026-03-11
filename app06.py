@@ -517,7 +517,7 @@ def build_messages(api_history, taslak_raw, taslak_dict, lang="tr"):
 SHEETS_HEADER = [
     "Tarih", "Danışman", "Dil", "Tur", "P.Token", "O.Token", "Toplam", "Maliyet",
     "Konsept", "Motivasyon", "Önem", "Literatür", "Soru", "Gösterge",
-    "YZ_Öğrenme", "YZ_SonrakiKullanım", "Not1", "Not2", "Not3",
+    "YZ_Öğrenme", "YZ_SonrakiKullanım", "Not1", "Not2", "Not3", "SohbetGunlugu",
 ]
 
 @st.cache_resource
@@ -538,7 +538,17 @@ def get_sheet():
     except Exception as e:
         return None, str(e)[:300]
 
-def log_session(taslak_dict, selected, lang, turns, pt, ot, r3="", r4=""):
+def format_history_for_sheets(display_history):
+    """display_history listesini düz metin satırlarına dönüştürür."""
+    lines = []
+    for msg in display_history:
+        if msg.get("role") == "milestone":
+            continue
+        prefix = "[Danışman]" if msg["role"] == "assistant" else "[Öğrenci]"
+        lines.append(f"{prefix} {msg['content'].strip()}")
+    return "\n---\n".join(lines)
+
+def log_session(taslak_dict, selected, lang, turns, pt, ot, r3="", r4="", display_history=None):
     """Tamamlanan oturumu Google Sheets'e yazar (YZ yanıtları dahil)."""
     sheet, conn_err = get_sheet()
     if sheet is None:
@@ -551,6 +561,7 @@ def log_session(taslak_dict, selected, lang, turns, pt, ot, r3="", r4=""):
             sheet.append_row(SHEETS_HEADER, value_input_option="USER_ENTERED")
 
         maliyet = round((pt * 0.075 + ot * 0.30) / 1_000_000, 6)
+        sohbet_metni = format_history_for_sheets(display_history or [])
         row = [
             datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
             selected,
@@ -566,6 +577,7 @@ def log_session(taslak_dict, selected, lang, turns, pt, ot, r3="", r4=""):
             (r3 or "—")[:200],   # YZ_Öğrenme
             (r4 or "—")[:200],   # YZ_SonrakiKullanım
             "", "", "",           # Not1, Not2, Not3 (hoca doldurur)
+            sohbet_metni,        # SohbetGunlugu
         ]
         sheet.append_row(row, value_input_option="USER_ENTERED")
         st.session_state.sheets_error = ""
@@ -590,10 +602,11 @@ class ResearchPDF(FPDF):
     """FPDF alt sınıfı — her sayfanın altına attribution + session damgası ekler."""
     _footer_attr: str = ""
     _session_id:  str = ""
+    _font_name:   str = "Helvetica"   # build_pdf() Unicode font yükleyince günceller
 
     def footer(self):
         self.set_y(-13)
-        self.set_font("Helvetica", "", 7)
+        self.set_font(self._font_name, "", 7)
         self.set_text_color(160, 160, 160)
         self.cell(145, 5, self._footer_attr, align="L")
         self.cell(0,   5, f"#{self._session_id}", align="R")
@@ -628,6 +641,7 @@ def build_pdf(selected, taslak_dict, display_history, r1, r2, r3, r4,
             break
         except Exception:
             continue
+    pdf._font_name = f   # footer() Türkçe karakterler için aynı fontu kullansın
 
     tarih = datetime.date.today().strftime("%d.%m.%Y")
     G  = (46, 125, 50)
@@ -1279,6 +1293,7 @@ elif st.session_state.stage == 2:
                     pt, ot,
                     r3=st.session_state.get("r3_val", ""),
                     r4=st.session_state.get("r4_val", ""),
+                    display_history=st.session_state.display_history,
                 )
             except Exception:
                 pass  # Sheets bağlantısı yoksa sessizce atla
