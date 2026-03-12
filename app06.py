@@ -1,6 +1,6 @@
 import streamlit as st
 from openai import OpenAI
-import os, re, datetime, uuid, json
+import os, re, datetime, uuid, json, time
 from fpdf import FPDF
 from dotenv import load_dotenv
 
@@ -414,6 +414,7 @@ for k, v in {
     "r1_val": "", "r2_val": "", "r3_val": "", "r4_val": "",
     "local_log_saved":      False,
     "sheets_log_saved":     False,
+    "session_start_time":   0.0,
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -519,9 +520,17 @@ def build_messages(api_history, taslak_raw, taslak_dict, lang="tr"):
 # GOOGLE SHEETS
 # ══════════════════════════════════════════════════════════════════
 SHEETS_HEADER = [
-    "Tarih", "Danışman", "Dil", "Tur", "P.Token", "O.Token", "Toplam", "Maliyet",
+    # Meta
+    "Tarih", "ÖğrenciAdı", "Danışman", "Dil", "Model", "Tur", "Süre(dk)",
+    "P.Token", "O.Token", "Toplam", "Maliyet",
+    # KKV Taslak
     "Konsept", "Motivasyon", "Önem", "Literatür", "Soru", "Gösterge",
-    "YZ_Öğrenme", "YZ_SonrakiKullanım", "Not1", "Not2", "Not3", "SohbetGunlugu",
+    # Refleksiyon
+    "r1_Zorluk", "r2_YazmaSüreç", "YZ_Öğrenme", "YZ_SonrakiKullanım",
+    # Hoca Notları
+    "Not1", "Not2", "Not3",
+    # Tam Log
+    "SohbetGunlugu",
 ]
 
 @st.cache_resource
@@ -552,7 +561,9 @@ def format_history_for_sheets(display_history):
         lines.append(f"{prefix} {msg['content'].strip()}")
     return "\n---\n".join(lines)
 
-def log_session(taslak_dict, selected, lang, turns, pt, ot, r3="", r4="", display_history=None):
+def log_session(taslak_dict, selected, lang, turns, pt, ot,
+                student_name="", r1="", r2="", r3="", r4="",
+                süre=0, display_history=None):
     """Tamamlanan oturumu Google Sheets'e yazar (YZ yanıtları dahil)."""
     sheet, conn_err = get_sheet()
     if sheet is None:
@@ -567,19 +578,27 @@ def log_session(taslak_dict, selected, lang, turns, pt, ot, r3="", r4="", displa
         maliyet = round((pt * 0.075 + ot * 0.30) / 1_000_000, 6)
         sohbet_metni = format_history_for_sheets(display_history or [])
         row = [
+            # Meta
             datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            (student_name or "—")[:80],
             selected,
             lang,
+            MODEL_NAME,
             turns,
+            süre,
             pt, ot, pt + ot, maliyet,
+            # KKV Taslak
             taslak_dict.get("Konsept",    "—"),
-            taslak_dict.get("Motivasyon", "—")[:100],
-            taslak_dict.get("Önem",       "—")[:100],
-            taslak_dict.get("Literatür",  "—")[:100],
-            taslak_dict.get("Soru",       "—")[:150],
-            taslak_dict.get("Gösterge",   "—")[:100],
-            (r3 or "—")[:200],   # YZ_Öğrenme
-            (r4 or "—")[:200],   # YZ_SonrakiKullanım
+            taslak_dict.get("Motivasyon", "—")[:300],
+            taslak_dict.get("Önem",       "—")[:300],
+            taslak_dict.get("Literatür",  "—")[:300],
+            taslak_dict.get("Soru",       "—")[:300],
+            taslak_dict.get("Gösterge",   "—")[:300],
+            # Refleksiyon
+            (r1 or "—")[:300],   # r1_Zorluk
+            (r2 or "—")[:300],   # r2_YazmaSüreç
+            (r3 or "—")[:300],   # YZ_Öğrenme
+            (r4 or "—")[:300],   # YZ_SonrakiKullanım
             "", "", "",           # Not1, Not2, Not3 (hoca doldurur)
             sohbet_metni,        # SohbetGunlugu
         ]
@@ -1029,6 +1048,7 @@ if st.session_state.stage == 0:
             {"role": "model", "parts": [ilk]},
         ]
         st.session_state.stage = 1
+        st.session_state.session_start_time = time.time()
         st.rerun()
 
 # ── STAGE 1: Sohbet ───────────────────────────────────────────────
@@ -1289,14 +1309,19 @@ elif st.session_state.stage == 2:
             try:
                 pt = st.session_state.total_prompt_tokens
                 ot = st.session_state.total_output_tokens
+                elapsed = time.time() - st.session_state.get("session_start_time", time.time())
                 log_session(
                     st.session_state.taslak_dict,
                     st.session_state.get("selected", ""),
                     lang,
                     st.session_state.total_turns,
                     pt, ot,
+                    student_name=st.session_state.get("student_name", ""),
+                    r1=st.session_state.get("r1_val", ""),
+                    r2=st.session_state.get("r2_val", ""),
                     r3=st.session_state.get("r3_val", ""),
                     r4=st.session_state.get("r4_val", ""),
+                    süre=round(elapsed / 60, 1),
                     display_history=st.session_state.display_history,
                 )
             except Exception:
