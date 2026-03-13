@@ -24,7 +24,7 @@ st.set_page_config(page_title="Araştırma Laboratuvarı", page_icon="🎓", lay
 BASE = """
 Sen KKV & Babbie standartlarında araştırma rehberisin. Hedef kitle: lisans 1-2. sınıf öğrencisi.
 
-DİL KURALI: Öğrencinin yazdığı dilde yanıt ver. Türkçe yazıyorsa Türkçe, İngilizce yazıyorsa İngilizce yanıt ver. DURUM etiketi alan adları her zaman Türkçe kalır (Konsept, Motivasyon vb.) — bu normaldir, sadece sohbet dili değişir.
+DİL KURALI: Öğrencinin yazdığı dilde MUTLAKA yanıt ver. Türkçe → Türkçe, İngilizce → İngilizce. ASLA başka bir dil kullanma — Rusça, Çince, Arapça veya başka herhangi bir dil kesinlikle yasak. DURUM etiketi alan adları her zaman Türkçe kalır — bu normaldir, sadece sohbet dili değişir.
 
 YANIT FORMATI: Onayla (1 cümle) + gerekirse kısa açıkla + tek soru sor. Toplam 3-5 cümle. Uzun paragraf yazma.
 TEKNİK TERİM: İlk kullanımda parantez içi kısa tanım ver (tekrarlama). Örn: "ampirik (= gözle görülüp test edilebilen)"
@@ -33,6 +33,8 @@ VERİMLİLİK: Tek soru. Yeterli cevap → onayla ve geç. Aynı adımda 2+ alt 
 TEK ADIM: Onay olmadan geçme; onay gelince hemen ilerle. Onaylandıysa ve adım bittiyse gereksiz sohbete, tekrara girme.
 KAYNAK HİNT: "Neden böyle?" sorusuna tek cümle kaynak: ÖNEM→KKV 1994:15 | SORU→Erdoğan 2021:51 | LİTERATÜR→KKV 1994:15-17. Otomatik değil.
 PAUSE+DURUM: Adım bitince: (1) "X kararlaştırdık." (2) DURUM alanını doldur — '…' BIRAKMA (3) Sonraki soruyu sor. EĞER GÖSTERGE ADIMINI ONAYLADIYSAN ARTIK SORU SORULMAYACAK.
+ADIM GEÇİŞ KURALI: Bir adımı onaylayıp bir sonrakine geçerken MUTLAKA geçiş cümlesi kur: "X adımını tamamladık! Şimdi Y adımına geçiyoruz — [bu adımın amacını 1 cümle açıkla]." Bu geçiş cümlesini ASLA atlama.
+SORU NEDENİ: Her adımın sorusunu sormadan önce neden sorduğunu 1 kısa cümleyle belirt. Örn: "Toplumsal önemi sormamın nedeni KKV'nin araştırılmaya değer konuları ayırt etmesidir."
 SONLANDIRMA KURALI: Gösterge adımında verilen cevap yeterliyse SADECE onaycı bir cümle kur, "Artık anketini yapabilirsin, tebrikler" gibi bir özet geç ve DURUM alanını yazıp sonuna <TAMAMLANDI> etiketini ekle. Asla "başka ne eklersin" diye sorma!
 
 Sırayla ilerle:
@@ -49,8 +51,9 @@ Sırayla ilerle:
 
 3. ÖNEM (KKV Krit.1) — kaç insanı, hayatlarında ne değiştiriyor? (KKV: "significantly affects many people's lives")
    Bar: "TFF ve TV / faydalı olur" → YETERSİZ. Toplumsal ağırlık + somut etki → YETERLİ.
+   AMPİRİK VERİ TUZAĞI: Öğrenciden kesin istatistik veya sayısal veri isteme — "binlerce kişi", "pek çok öğrenci", "milyonlarca insan" gibi sezgisel tahminler YETERLİDİR. "Kaç kişi etkileniyor?" sorusunu aynı tur içinde 2 kereden fazla SORMA!
    Soru: "Bu konu kaç insanı etkiliyor ve hayatlarında ne tür somut sonuçlar doğuruyor?"
-   Yetersiz → "Daha somut ol — kaç kişi, hayatlarında ne değişiyor?"
+   Yetersiz → Farklı bir açıdan yaklaş: "Bu durumdan etkilenen grupları düşün — öğrenciler mi, aileler mi, çalışanlar mı?" (Aynı soruyu tekrar etme!)
    DURUM → Önem: [5-10 kelime]
 
 4. LİTERATÜR (KKV Krit.2) — 1 yaklaşım + 1 boşluk ("X bilinir ama Y bilinmiyor").
@@ -79,7 +82,7 @@ Her yanıtın SONUNA MUTLAKA (onaylananları doldur, onaylanmayanları … bıra
 BASE_EN = """
 You are a research guide operating on KKV & Babbie standards. Target audience: Year 1-2 undergraduates.
 
-LANGUAGE RULE: Respond in the same language the student uses. If they write in Turkish, reply in Turkish; if in English, reply in English. The DURUM tag field names always stay in Turkish (Konsept, Motivasyon, etc.) — that is fine, only the conversational text adapts.
+LANGUAGE RULE: ALWAYS respond in the same language the student uses. Turkish → Turkish, English → English. NEVER use any other language — Russian, Chinese, Arabic, or any other language is strictly forbidden. The DURUM tag field names always stay in Turkish — that is fine, only the conversational text adapts.
 
 RESPONSE FORMAT: Confirm (1 sentence) + brief explanation if needed + ask one question. Total 3-5 sentences. No long paragraphs.
 TECHNICAL TERMS: On first use, give a brief parenthetical definition (no repetition). E.g.: "empirical (= observable and testable)"
@@ -88,6 +91,8 @@ EFFICIENCY: One question. Sufficient answer → confirm and move on. Don't ask 2
 ONE STEP: Don't move forward without confirmation; when confirmation comes, proceed immediately. If approved, do not engage in small talk.
 SOURCE HINT: For "Why like this?" questions, one-sentence source: SIGNIFICANCE→KKV 1994:15 | QUESTION→Erdoğan 2021:51 | LITERATURE→KKV 1994:15-17. Not automatic.
 PAUSE+STATUS: When a step ends: (1) "We've decided on X." (2) Fill STATUS field — DON'T leave '…' (3) Ask the next question. IF INDICATOR IS APPROVED, ASK NO MORE QUESTIONS.
+STEP TRANSITION RULE: When moving from one step to the next, ALWAYS include a transition sentence: "We've completed Step X! Now moving to Step Y — [explain in 1 sentence why this step matters]." NEVER skip this transition.
+QUESTION RATIONALE: Before asking each step's question, briefly state in 1 short sentence why you're asking it. E.g.: "I'm asking about significance because KKV distinguishes research-worthy topics by their societal impact."
 TERMINATION RULE: When the indicator is approved, write ONE congratulatory sentence, fill out the STATUS field and append <TAMAMLANDI>. NEVER ask "what else would you add?" or loop the conversation.
 
 Proceed in order:
@@ -104,8 +109,9 @@ Proceed in order:
 
 3. SIGNIFICANCE (KKV Crit.1) — how many people does it affect, what does it change in their lives? (KKV: "significantly affects many people's lives")
    Bar: "Football federation and TV / could be useful" → INSUFFICIENT. Societal weight + concrete impact → SUFFICIENT.
+   EMPIRICAL DATA TRAP: Do NOT ask for precise statistics or numbers — intuitive estimates like "thousands of people", "many students", "millions of people" are SUFFICIENT. Do NOT ask "how many people are affected?" more than twice in the same turn!
    Question: "How many people does this topic affect and what kinds of concrete outcomes does it produce in their lives?"
-   If insufficient → "Be more specific — how many people, what changes in their lives?"
+   If insufficient → Try a different angle: "Think about the groups affected — students, families, workers?" (Don't repeat the same question!)
    STATUS → Önem: [5-10 words]
 
 4. LITERATURE (KKV Crit.2) — 1 approach + 1 gap ("X is known but Y is unknown").
@@ -168,7 +174,11 @@ STRINGS = {
         "hero_heading": "15 dakikada gerçek bir araştırma sorusu yaz.",
         "hero_body":    ("Kafandaki fikri bir AI danışmanıyla <b>6 adımda</b> akademik standartlarda "
                          "bir araştırma sorusuna dönüştüreceksin.<br>"
-                         "Ne yapacağını bilmene gerek yok — sadece merak ettiğin bir şeyi söyle."),
+                         "Ne yapacağını bilmene gerek yok — sadece merak ettiğin bir şeyi söyle.<br><br>"
+                         "<b>⏱ ~15 dakika ne demek?</b> Danışmanınla sohbet ederek 6 adımı tamamlayacaksın: "
+                         "konu, kişisel motivasyon, toplumsal önem, literatür, araştırma sorusu ve gösterge. "
+                         "Her adım 1-3 mesajdan oluşuyor — toplamda yaklaşık 15 dakika.<br>"
+                         "<b>👥 Grup çalışması yapıyorsanız:</b> Her kişi kendi oturumunu açmalı ve kendi PDF'ini indirmeli."),
         "hero_pills":   ["⏱ ~15 dakika", "📋 6 adım", "📄 PDF rapor", "💡 AI ile birlikte — AI'ye rağmen"],
         "choose_advisor": "**Danışmanını seç:**",
         "btn_selected": "✓ Seçildi",
@@ -229,7 +239,10 @@ STRINGS = {
         "pdf_btn":      "📥 PDF Olarak İndir",
         "txt_btn":      "📄 TXT Olarak İndir",
         "pdf_err":      "PDF oluşturulamadı",
-        "submit_note":  "⬆️ Bu PDF'i ödeve ek olarak yükle.",
+        "submit_note":  "⬆️ Bu PDF'i Learne'e ödevin eki olarak yükle.",
+        "reset_warning": "⚠️ Tarayıcı sekmesini kapatır veya sayfayı yenilerseniz oturum sıfırlanır ve sohbet kaybolur.",
+        "s2_name_info":  "Grup çalışmasıysa tüm üye isimlerini girin (yalnızca ilk alan zorunlu).",
+        "s2_name_label_extra": "{n}. Üye",
         # PDF strings
         "pdf_title":      "Research Architect  ·  Modül 1: KKV Gatekeeper",
         "pdf_meta":       "Danışman: {advisor}     |     Tarih: {date}",
@@ -277,7 +290,11 @@ STRINGS = {
         "hero_heading": "Write a real research question in 15 minutes.",
         "hero_body":    ("You'll turn your idea into an academically sound research question in "
                          "<b>6 steps</b> with an AI advisor.<br>"
-                         "You don't need to know what to do — just share something you're curious about."),
+                         "You don't need to know what to do — just share something you're curious about.<br><br>"
+                         "<b>⏱ What does ~15 minutes mean?</b> You'll go through 6 steps in conversation with your advisor: "
+                         "topic, personal motivation, significance, literature, research question, and indicator. "
+                         "Each step takes 1-3 messages — about 15 minutes in total.<br>"
+                         "<b>👥 For group work:</b> Each person must open their own session and download their own PDF."),
         "hero_pills":   ["⏱ ~15 minutes", "📋 6 steps", "📄 PDF report", "💡 With AI — not despite it"],
         "choose_advisor": "**Choose your advisor:**",
         "btn_selected": "✓ Selected",
@@ -339,7 +356,10 @@ STRINGS = {
         "pdf_btn":      "📥 Download as PDF",
         "txt_btn":      "📄 Download as TXT",
         "pdf_err":      "Could not create PDF",
-        "submit_note":  "⬆️ Attach this PDF to your assignment.",
+        "submit_note":  "⬆️ Upload this PDF to Learne as your assignment attachment.",
+        "reset_warning": "⚠️ Closing or refreshing the browser tab will reset your session and erase the conversation.",
+        "s2_name_info":  "For group work, enter all member names (only the first field is required).",
+        "s2_name_label_extra": "Member {n}",
         # PDF strings
         "pdf_title":      "Research Architect  ·  Module 1: KKV Gatekeeper",
         "pdf_meta":       "Advisor: {advisor}     |     Date: {date}",
@@ -409,6 +429,10 @@ for k, v in {
     "total_turns":          0,
     "balloons_shown":       False,
     "student_name":         "",
+    "student_name_2":       "",
+    "student_name_3":       "",
+    "student_name_4":       "",
+    "student_name_5":       "",
     "refl_step":            0,
     "pdf_session_id":       "",
     "r1_val": "", "r2_val": "", "r3_val": "", "r4_val": "",
@@ -1038,6 +1062,8 @@ if st.session_state.stage == 0:
                 st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
+    st.warning(S["reset_warning"], icon="⚠️")
+    st.markdown("<br>", unsafe_allow_html=True)
     secilen = st.session_state.get("_secim", list(PERSONAS.keys())[0])
     if st.button(S["btn_start"], type="primary"):
         st.session_state.selected = secilen
@@ -1173,16 +1199,61 @@ elif st.session_state.stage == 2:
 
     st.success(S["s2_banner"])
 
-    # ── Öğrenci Adı ───────────────────────────────────────────────
-    name_col, _ = st.columns([2, 3])
-    with name_col:
-        sname = st.text_input(
+    # ── Öğrenci Adı (1 zorunlu + 4 isteğe bağlı) ─────────────────
+    st.markdown(f"**{S['s2_name_label']}**")
+    st.caption(S["s2_name_info"])
+    _name_cols = st.columns(3)
+    with _name_cols[0]:
+        n1 = st.text_input(
             S["s2_name_label"],
             value=st.session_state.get("student_name", ""),
             placeholder=S["s2_name_ph"],
             key="student_name_input",
+            label_visibility="collapsed",
         )
-        st.session_state["student_name"] = sname
+        st.session_state["student_name"] = n1
+    with _name_cols[1]:
+        n2 = st.text_input(
+            S["s2_name_label_extra"].format(n=2),
+            value=st.session_state.get("student_name_2", ""),
+            placeholder=S["s2_name_label_extra"].format(n=2),
+            key="student_name_2_input",
+            label_visibility="collapsed",
+        )
+        st.session_state["student_name_2"] = n2
+    with _name_cols[2]:
+        n3 = st.text_input(
+            S["s2_name_label_extra"].format(n=3),
+            value=st.session_state.get("student_name_3", ""),
+            placeholder=S["s2_name_label_extra"].format(n=3),
+            key="student_name_3_input",
+            label_visibility="collapsed",
+        )
+        st.session_state["student_name_3"] = n3
+    _name_cols2 = st.columns(3)
+    with _name_cols2[0]:
+        n4 = st.text_input(
+            S["s2_name_label_extra"].format(n=4),
+            value=st.session_state.get("student_name_4", ""),
+            placeholder=S["s2_name_label_extra"].format(n=4),
+            key="student_name_4_input",
+            label_visibility="collapsed",
+        )
+        st.session_state["student_name_4"] = n4
+    with _name_cols2[1]:
+        n5 = st.text_input(
+            S["s2_name_label_extra"].format(n=5),
+            value=st.session_state.get("student_name_5", ""),
+            placeholder=S["s2_name_label_extra"].format(n=5),
+            key="student_name_5_input",
+            label_visibility="collapsed",
+        )
+        st.session_state["student_name_5"] = n5
+    # PDF için tüm dolu isimleri birleştir
+    _all_names = [n for n in [n1, n2, n3, n4, n5] if n and n.strip()]
+    _combined_name = " / ".join(_all_names)
+    if _combined_name:
+        st.session_state["student_name"] = _combined_name
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -1336,7 +1407,7 @@ elif st.session_state.stage == 2:
         )
         col_pdf, _ = st.columns([1, 4])
         with col_pdf:
-            name_ok = bool(st.session_state.get("student_name", "").strip())
+            name_ok = bool(n1 and n1.strip())
             if name_ok:
                 try:
                     pdf_bytes = build_pdf(
