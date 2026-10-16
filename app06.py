@@ -6,7 +6,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 API_KEY    = os.getenv("OPENROUTER_API_KEY", "")
-MODEL_NAME = os.getenv("OPENROUTER_MODEL", "google/gemini-2.0-flash-001")
+MODEL_NAME = os.getenv("OPENROUTER_MODEL", "anthropic/claude-haiku-5.5")
+# 1M token başına USD (girdi, çıktı) — model değişirse güncelleyin
+PRICE_IN, PRICE_OUT = 0.10, 0.50
 try:
     if not API_KEY: API_KEY = st.secrets["OPENROUTER_API_KEY"]
     MODEL_NAME = st.secrets.get("OPENROUTER_MODEL", MODEL_NAME)
@@ -404,12 +406,12 @@ STRINGS = {
 }
 
 # ══════════════════════════════════════════════════════════════════
+@st.cache_resource
+def _get_client():
+    return OpenAI(base_url="https://openrouter.ai/api/v1", api_key=API_KEY)
+
 def get_model(persona_prompt):
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=API_KEY,
-    )
-    return client, persona_prompt
+    return _get_client(), persona_prompt
 
 # ══════════════════════════════════════════════════════════════════
 # SESSION STATE
@@ -473,7 +475,7 @@ def stream(model_info, messages):
         model=MODEL_NAME,
         messages=oai_messages,
         temperature=0.6,
-        max_tokens=600,
+        max_tokens=1000,
         stream=True,
         timeout=60,
         stream_options={"include_usage": True},
@@ -592,14 +594,13 @@ def log_session(taslak_dict, selected, lang, turns, pt, ot,
     sheet, conn_err = get_sheet()
     if sheet is None:
         st.session_state.sheets_error = f"Bağlantı hatası: {conn_err}"
-        return
+        return False
     try:
         # Auto-header: sheet boşsa başlık satırı ekle
-        existing = sheet.get_all_values()
-        if not existing:
+        if not sheet.row_values(1):
             sheet.append_row(SHEETS_HEADER, value_input_option="USER_ENTERED")
 
-        maliyet = round((pt * 0.075 + ot * 0.30) / 1_000_000, 6)
+        maliyet = round((pt * PRICE_IN + ot * PRICE_OUT) / 1_000_000, 6)
         sohbet_metni = format_history_for_sheets(display_history or [])
         row = [
             # Meta
@@ -628,8 +629,10 @@ def log_session(taslak_dict, selected, lang, turns, pt, ot,
         ]
         sheet.append_row(row, value_input_option="USER_ENTERED")
         st.session_state.sheets_error = ""
+        return True
     except Exception as e:
         st.session_state.sheets_error = str(e)[:300]
+        return False
 
 def log_to_file(data: dict):
     """Oturum verisini yerel sessions.jsonl dosyasına ekler. Hata varsa sessizce atlar."""
@@ -643,7 +646,7 @@ def log_to_file(data: dict):
         pass  # Log hatası uygulamayı durdurmasın
 
 # ══════════════════════════════════════════════════════════════════
-# PDF OLUŞTURUCU
+# PDF OLUŞTURUCU (build_pdf_cached: aynı içerik için yeniden üretmez)
 # ══════════════════════════════════════════════════════════════════
 class ResearchPDF(FPDF):
     """FPDF alt sınıfı — her sayfanın altına attribution + session damgası ekler."""
@@ -843,6 +846,11 @@ def build_pdf(selected, taslak_dict, display_history, r1, r2, r3, r4,
 
     return bytes(pdf.output())
 
+
+@st.cache_data(show_spinner=False, max_entries=100, ttl=3600)
+def build_pdf_cached(*args, **kwargs):
+    return bytes(build_pdf(*args, **kwargs))
+
 # ══════════════════════════════════════════════════════════════════
 # SIDEBAR
 # ══════════════════════════════════════════════════════════════════
@@ -913,7 +921,7 @@ with st.sidebar:
     ot = st.session_state.total_output_tokens
     if pt or ot:
         toplam  = pt + ot
-        maliyet = (pt * 0.075 + ot * 0.30) / 1_000_000
+        maliyet = (pt * PRICE_IN + ot * PRICE_OUT) / 1_000_000
         st.markdown(
             f"<div style='font-size:.75em;color:#666;margin-top:4px;'>"
             f"<b>{S['session_label']}</b><br>"
@@ -1361,7 +1369,7 @@ elif st.session_state.stage == 2:
                 "p_token":     pt,
                 "o_token":     ot,
                 "toplam":      pt + ot,
-                "maliyet_usd": round((pt * 0.075 + ot * 0.30) / 1_000_000, 6),
+                "maliyet_usd": round((pt * PRICE_IN + ot * PRICE_OUT) / 1_000_000, 6),
                 "konsept":     st.session_state.taslak_dict.get("Konsept",    ""),
                 "motivasyon":  st.session_state.taslak_dict.get("Motivasyon", ""),
                 "onem":        st.session_state.taslak_dict.get("Önem",       ""),
@@ -1375,13 +1383,20 @@ elif st.session_state.stage == 2:
             })
             st.session_state["local_log_saved"] = True
 
-        # ── Otomatik Google Sheets log (bir kez) ──────────────────
-        if not st.session_state.get("sheets_log_saved"):
+        # ── Otomatik Google Sheets log (bir kez; hata olursa tekrar dene) ──
+        try:
+            _sheets_configured = "gcp_service_account" in st.secrets
+        except Exception:
+            _sheets_configured = False
+        if _sheets_configured and not st.session_state.get("sheets_log_saved") \
+                and not st.session_state.get("sheets_attempted"):
+            st.session_state["sheets_attempted"] = True
+            ok_saved = False
             try:
                 pt = st.session_state.total_prompt_tokens
                 ot = st.session_state.total_output_tokens
                 elapsed = time.time() - st.session_state.get("session_start_time", time.time())
-                log_session(
+                ok_saved = log_session(
                     st.session_state.taslak_dict,
                     st.session_state.get("selected", ""),
                     lang,
@@ -1395,9 +1410,19 @@ elif st.session_state.stage == 2:
                     süre=round(elapsed / 60, 1),
                     display_history=st.session_state.display_history,
                 )
-            except Exception:
-                pass  # Sheets bağlantısı yoksa sessizce atla
-            st.session_state["sheets_log_saved"] = True
+            except Exception as _e:
+                st.session_state.sheets_error = str(_e)[:300]
+            st.session_state["sheets_log_saved"] = bool(ok_saved)
+        if _sheets_configured and st.session_state.get("sheets_attempted") \
+                and not st.session_state.get("sheets_log_saved"):
+            st.warning(
+                "⚠️ Oturum kaydı sunucuya iletilemedi. Lütfen tekrar deneyin; sorun sürerse PDF'i indirip eğitmeninize gönderin."
+                if lang != "en" else
+                "⚠️ Your session could not be saved to the server. Please retry; if it keeps failing, download the PDF and send it to your instructor."
+            )
+            if st.button("🔄 Tekrar dene" if lang != "en" else "🔄 Retry"):
+                st.session_state["sheets_attempted"] = False
+                st.rerun()
 
         st.divider()
         st.markdown(
@@ -1410,7 +1435,7 @@ elif st.session_state.stage == 2:
             name_ok = bool(n1 and n1.strip())
             if name_ok:
                 try:
-                    pdf_bytes = build_pdf(
+                    pdf_bytes = build_pdf_cached(
                         st.session_state.selected,
                         st.session_state.taslak_dict,
                         st.session_state.display_history,
